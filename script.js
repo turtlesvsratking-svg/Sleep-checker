@@ -1,137 +1,232 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    // --- DOM要素の取得 ---
+    // --- 1. DOM要素の取得 ---
     const calcBtn = document.getElementById('calc-btn');
+    const saveBtn = document.getElementById('save-btn');
+    const clearAllBtn = document.getElementById('clear-all-btn');
     const nightShiftCheckbox = document.getElementById('night-shift-mode');
     const inputCard = document.getElementById('input-card');
     
-    const labelNightSleep = document.getElementById('label-night-sleep');
-    const labelNapSleep = document.getElementById('label-nap-sleep');
-    const dynamicHint = document.getElementById('dynamic-hint');
+    const normalInputs = document.getElementById('normal-inputs');
+    const shadowInputs = document.getElementById('shadow-inputs');
+    const adviceOutput = document.getElementById('advice-output');
+    const waterEl = document.getElementById('water');
+    const checkboxes = document.querySelectorAll('.symptom-check');
+    const historyContainer = document.getElementById('history-container');
 
-    // --- 1. 夜勤モード切り替え時のUI制御 ---
+    // グローバルに今の診断結果データを保持するオブジェクト
+    let currentCalculationResult = null;
+
+    // --- 2. 勤務モード切り替え制御 ---
     nightShiftCheckbox.addEventListener('change', () => {
-        const isNightShift = nightShiftCheckbox.checked;
+        const isShift = nightShiftCheckbox.checked;
         
-        if (isNightShift) {
-            // 夜勤モードON: テーマカラーをインディゴに変更
+        if (isShift) {
             inputCard.classList.add('nightshift-active-border');
             calcBtn.classList.add('nightshift-btn');
             document.querySelector('.nightshift-toggle-box').classList.add('active');
-            
-            labelNightSleep.innerText = "主なまとまった睡眠 (時間):";
-            labelNapSleep.innerText = "夜勤前の仮眠、または小まめな睡眠 (分):";
-            dynamicHint.innerHTML = "🌙 <strong>夜勤対応モード中:</strong> 夜勤前のまとまった仮眠(90〜120分)や夜勤明けの睡眠も、健康維持の「戦略的睡眠」として等倍以上で正しく評価されます！";
+            normalInputs.classList.add('hidden');
+            shadowInputs.classList.remove('hidden');
         } else {
-            // 通常モード
             inputCard.classList.remove('nightshift-active-border');
             calcBtn.classList.remove('nightshift-btn');
             document.querySelector('.nightshift-toggle-box').classList.remove('active');
-            
-            labelNightSleep.innerText = "昨晩の睡眠 (時間):";
-            labelNapSleep.innerText = "今日の昼寝 (分):";
-            dynamicHint.innerHTML = "💡 昼寝の豆知識: 15〜30分の昼寝は、夜間睡眠の約3倍の回復効果があると言われています！";
+            normalInputs.classList.remove('hidden');
+            shadowInputs.classList.add('hidden');
         }
-        calculateSleep();
+        evaluateAndPropose();
     });
 
-    // --- 2. 睡眠スコア＆コップ可視化の主ロジック ---
-    function calculateSleep() {
+    // --- 3. コア診断＆睡眠時間提案ロジック ---
+    function evaluateAndPropose() {
         const target = parseFloat(document.getElementById('target-sleep').value);
-        const night = parseFloat(document.getElementById('night-sleep').value);
-        const nap = parseFloat(document.getElementById('nap-sleep').value);
-        const isNightShift = nightShiftCheckbox.checked;
+        const checkedCount = document.querySelectorAll('.symptom-check:checked').length;
+        const isShift = nightShiftCheckbox.checked;
 
-        let effectiveNapHours = 0;
+        let totalScore = 0;         
+        let sleepDebtHours = 0;     
+        let recommendedTonight = 0; 
+        let inputSummaryStr = "";   // 履歴カード用のインプット要約文字
 
-        if (isNightShift) {
-            // 【夜勤モード】仮眠制限を解除し等倍でしっかり睡眠時間として換算
-            effectiveNapHours = nap / 60;
-        } else {
-            // 【通常モード】15〜30分は3倍効率、それを超える分は等倍換算
+        if (!isShift) {
+            const night = parseFloat(document.getElementById('night-sleep').value);
+            const nap = parseFloat(document.getElementById('nap-sleep').value);
+
+            let effectiveNap = 0;
             if (nap <= 30) {
-                effectiveNapHours = (nap * 3) / 60; 
+                effectiveNap = (nap * 3) / 60;
             } else {
-                effectiveNapHours = ((30 * 3) + (nap - 30)) / 60;
+                effectiveNap = ((30 * 3) + (nap - 30)) / 60;
             }
+
+            totalScore = night + effectiveNap;
+            sleepDebtHours = target - totalScore;
+
+            let symptomBonus = 0;
+            if (checkedCount >= 3) symptomBonus = 1.0;
+            else if (checkedCount > 0) symptomBonus = 0.5;
+
+            recommendedTonight = target + (sleepDebtHours > 0 ? sleepDebtHours : 0) + symptomBonus;
+            inputSummaryStr = `昨晩: ${night}h / 昼寝: ${nap}分`;
+            
+        } else {
+            const beforeNap = parseFloat(document.getElementById('shift-before-nap').value);
+            const afterNap = parseFloat(document.getElementById('shift-after-nap').value);
+
+            totalScore = beforeNap + afterNap;
+            sleepDebtHours = target - totalScore;
+
+            let shiftDeficit = target - afterNap;
+            if (shiftDeficit < 0) shiftDeficit = 0;
+
+            recommendedTonight = target + shiftDeficit;
+            inputSummaryStr = `夜勤前仮眠: ${beforeNap}h / 明け仮眠: ${afterNap}h`;
         }
 
-        const totalScore = night + effectiveNapHours;
-        
-        // コップの水量計算 (0% 〜 120%)
+        // コップの可視化反映
         let pct = (totalScore / target) * 100;
         if (pct > 120) pct = 120;
         if (pct < 0) pct = 0;
-
-        const waterEl = document.getElementById('water');
         waterEl.style.height = `${pct}%`;
 
-        const diff = totalScore - target;
-        const resultStatusEl = document.getElementById('result-status');
-
-        if (isNightShift) {
-            waterEl.style.background = 'linear-gradient(to top, #3f51b5, #7986cb)'; // 夜勤用の青水
-            if (totalScore >= target) {
-                resultStatusEl.innerHTML = `
-                    <div class="alert info">
-                        <strong>夜勤帯の睡眠確保、バッチリです！</strong><br>
-                        不規則な中、戦略的に睡眠時間を確保できています。退勤時はサングラスをかけるなどして、光の刺激を避けつつ遮光して休んでくださいね。
-                    </div>
-                `;
-            } else {
-                resultStatusEl.innerHTML = `
-                    <div class="alert danger">
-                        <strong>夜勤による急性睡眠不足を検知 (残り ${Math.abs(diff).toFixed(1)}時間分不足)</strong><br>
-                        コップが満たされていません。夜勤明けの睡眠は「分割」でも構いません。1週間の中で少しずつ多めに寝て返済しましょう。
-                    </div>
-                `;
-            }
+        if (isShift) {
+            waterEl.style.background = 'linear-gradient(to top, #3f51b5, #7986cb)';
         } else {
-            if (diff >= 0) {
-                waterEl.style.background = 'linear-gradient(to top, #4caf50, #81c784)'; // 安全：グリーン
-                resultStatusEl.innerHTML = `
-                    <div class="alert success">
-                        <strong>睡眠貯金バッチリ！ (+${diff.toFixed(1)}時間分)</strong><br>
-                        コップが満たされました。この調子で良好なリズムをキープしましょう。
-                    </div>
-                `;
-            } else {
-                waterEl.style.background = 'linear-gradient(to top, #ff9800, #ffb74d)'; // 負債：オレンジ
-                resultStatusEl.innerHTML = `
-                    <div class="alert danger">
-                        <strong>睡眠負債が発生中！ (残り ${Math.abs(diff).toFixed(1)}時間不足)</strong><br>
-                        コップの水が足りていません。今週末までに小まめな仮眠や早めの就寝で返済を！
-                    </div>
-                `;
-            }
+            waterEl.style.background = totalScore >= target ? 'linear-gradient(to top, #4caf50, #81c784)' : 'linear-gradient(to top, #ff9800, #ffb74d)';
+        }
+
+        // 動的な診断・提案画面の生成
+        let htmlOutput = "";
+        htmlOutput += `
+            <div class="box-target-time ${isShift ? 'shift-mode' : ''}">
+                <h4>🎯 あなたが今日の夜に確保すべき睡眠時間:</h4>
+                <div class="big-time">${recommendedTonight.toFixed(1)} 時間</div>
+                <p style="margin:0.3rem 0 0 0; font-size:0.8rem; color:#555;">
+                    ${isShift ? '※夜勤前後の仮眠状況から逆算した、体内時計を戻すための推奨値です。' : '※日頃の目標時間、昨日の不足分、心身のサインを統合して割り出しました。'}
+                </p>
+            </div>
+        `;
+
+        let alternativeNapMin = 20; 
+        if (sleepDebtHours > 1.5 || checkedCount >= 3) {
+            alternativeNapMin = isShift ? 60 : 30;
+        }
+
+        htmlOutput += `
+            <div class="box-nap-proposal">
+                <strong>⏳ そんなに眠る時間が取れないときは？</strong><br>
+                明日の日中に、追加で <strong>${alternativeNapMin}分間</strong> の仮眠（昼寝）をスケジュールに組み込んでください。
+            </div>
+        `;
+
+        if (checkedCount > 0) {
+            let alertMessage = checkedCount >= 3 
+                ? `🚨 <strong>睡眠不足アラート（重度）:</strong> 心身のサインが3項目以上出ています。脳のパフォーマンスが低下している状態ですので、今夜の長時間睡眠の確保、または上記の代替仮眠を必ず実践してください。`
+                : `⚠️ <strong>自覚症状あり:</strong> 体に軽度の睡眠不足サインが出ています。睡眠負債を溜め込まないよう、早期返済を意識しましょう。`;
+            htmlOutput += `<div class="box-symptom-alert">${alertMessage}</div>`;
+        }
+
+        adviceOutput.innerHTML = htmlOutput;
+
+        // 次回保存用にオブジェクトとして記録
+        currentCalculationResult = {
+            isShift: isShift,
+            inputSummary: inputSummaryStr,
+            recommended: recommendedTonight.toFixed(1),
+            checkedSigns: checkedCount
+        };
+    }
+
+    // --- 4. ローカルストレージ履歴保存機能 ---
+    function loadHistory() {
+        const historyData = JSON.parse(localStorage.getItem('sleepHistory')) || [];
+        historyContainer.innerHTML = "";
+
+        if (historyData.length === 0) {
+            historyContainer.innerHTML = `<p style="color: #888; font-size: 0.9rem; grid-column: 1/-1; text-align: center; margin: 1rem 0;">保存された履歴カードはありません。</p>`;
+            return;
+        }
+
+        historyData.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = `history-card ${item.isShift ? 'shift-style' : 'normal-style'}`;
+            
+            card.innerHTML = `
+                <button class="btn-delete-card" data-index="${index}">&times;</button>
+                <div class="history-date">${item.date} [${item.isShift ? '夜勤サイクル' : '通常サイクル'}]</div>
+                <div class="history-meta">${item.inputSummary} (目標: ${item.target}h)</div>
+                <div class="history-meta">自覚症状チェック: ${item.checkedSigns}個</div>
+                <div class="history-result">👉 提案就寝: <strong>${item.recommended}時間</strong></div>
+            `;
+            historyContainer.appendChild(card);
+        });
+
+        // 削除ボタンの個別イベント付与
+        document.querySelectorAll('.btn-delete-card').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = e.target.getAttribute('data-index');
+                deleteHistoryItem(idx);
+            });
+        });
+    }
+
+    function saveHistory() {
+        if (!currentCalculationResult) return;
+
+        const historyData = JSON.parse(localStorage.getItem('sleepHistory')) || [];
+        
+        // 現在の日付を取得
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const targetValue = parseFloat(document.getElementById('target-sleep').value);
+
+        // 新しい履歴オブジェクトの組み立て
+        const newRecord = {
+            date: dateStr,
+            target: targetValue,
+            isShift: currentCalculationResult.isShift,
+            inputSummary: currentCalculationResult.inputSummary,
+            recommended: currentCalculationResult.recommended,
+            checkedSigns: currentCalculationResult.checkedSigns
+        };
+
+        // 配列の先頭に追加して保存
+        historyData.unshift(newRecord);
+        localStorage.setItem('sleepHistory', JSON.stringify(historyData));
+
+        // UIへの通知とリロード
+        const originalText = saveBtn.innerText;
+        saveBtn.innerText = "✨ 保存しました！";
+        saveBtn.style.backgroundColor = "#4caf50";
+        setTimeout(() => {
+            saveBtn.innerText = originalText;
+            saveBtn.style.backgroundColor = "";
+        }, 1500);
+
+        loadHistory();
+    }
+
+    function deleteHistoryItem(index) {
+        const historyData = JSON.parse(localStorage.getItem('sleepHistory')) || [];
+        historyData.splice(index, 1);
+        localStorage.setItem('sleepHistory', JSON.stringify(historyData));
+        loadHistory();
+    }
+
+    function clearAllHistory() {
+        if (confirm("これまでの睡眠履歴カードをすべて消去してもよろしいですか？")) {
+            localStorage.removeItem('sleepHistory');
+            loadHistory();
         }
     }
 
-    calcBtn.addEventListener('click', calculateSleep);
+    // イベントリスナーの追加
+    calcBtn.addEventListener('click', evaluateAndPropose);
+    checkboxes.forEach(cb => cb.addEventListener('change', evaluateAndPropose));
+    saveBtn.addEventListener('click', saveHistory);
+    clearAllBtn.addEventListener('click', clearAllHistory);
 
-    // --- 3. 睡眠不足度セルフチェックシステム ---
-    const checkboxes = document.querySelectorAll('.symptom-check');
-    const adviceEl = document.getElementById('check-advice');
-
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', () => {
-            const checkedCount = document.querySelectorAll('.symptom-check:checked').length;
-            if (checkedCount > 0) {
-                adviceEl.classList.remove('hidden');
-                if (checkedCount >= 3) {
-                    adviceEl.className = "advice-box severe";
-                    adviceEl.innerHTML = `🚨 <strong>警告:</strong> 脳と体に強い疲労（睡眠負債）が蓄積している可能性があります。一刻も早い「1週間以内の返済スケジュール」を立ててください。`;
-                } else {
-                    adviceEl.className = "advice-box warning";
-                    adviceEl.innerHTML = `⚠️ <strong>注意:</strong> 自覚症状が出ています。今日の夜、または次の夜勤前後の仮眠は目標時間プラス1時間の確保を目指しましょう。`;
-                }
-            } else {
-                adviceEl.classList.add('hidden');
-            }
-        });
-    });
-
-    // --- 4. 解説ページ（モーダル）開閉システム ---
+    // --- 5. 解説モーダル開閉制御 ---
     const modal = document.getElementById('guide-modal');
     const openBtn = document.getElementById('open-guide-btn');
     const closeBtn = document.getElementById('close-guide-btn');
@@ -140,11 +235,9 @@ document.addEventListener('DOMContentLoaded', () => {
     openBtn.addEventListener('click', () => modal.classList.remove('hidden'));
     closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
     closeBottomBtn.addEventListener('click', () => modal.classList.add('hidden'));
-    
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) modal.classList.add('hidden');
-    });
+    window.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
 
-    // 初期起動時の自動計算を実行
-    calculateSleep();
+    // 初期起動処理
+    evaluateAndPropose();
+    loadHistory();
 });
