@@ -14,12 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const isNightShift = nightShiftCheckbox.checked;
         
         if (isNightShift) {
-            // 夜勤モードON: テーマカラーをインディゴ寄りに変更
+            // 夜勤モードON: テーマカラーをインディゴに変更
             inputCard.classList.add('nightshift-active-border');
             calcBtn.classList.add('nightshift-btn');
             document.querySelector('.nightshift-toggle-box').classList.add('active');
             
-            // ラベル文言を夜勤ワーカー用に最適化
             labelNightSleep.innerText = "主なまとまった睡眠 (時間):";
             labelNapSleep.innerText = "夜勤前の仮眠、または小まめな睡眠 (分):";
             dynamicHint.innerHTML = "🌙 <strong>夜勤対応モード中:</strong> 夜勤前のまとまった仮眠(90〜120分)や夜勤明けの睡眠も、健康維持の「戦略的睡眠」として等倍以上で正しく評価されます！";
@@ -33,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
             labelNapSleep.innerText = "今日の昼寝 (分):";
             dynamicHint.innerHTML = "💡 昼寝の豆知識: 15〜30分の昼寝は、夜間睡眠の約3倍の回復効果があると言われています！";
         }
-        // スイッチが切り替わったら自動で再計算
         calculateSleep();
     });
 
@@ -47,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let effectiveNapHours = 0;
 
         if (isNightShift) {
-            // 【夜勤モード】仮眠・昼寝制限を解除。夜勤サバイブのための仮眠はすべて等倍で貴重な睡眠時間として換算
+            // 【夜勤モード】仮眠制限を解除し等倍でしっかり睡眠時間として換算
             effectiveNapHours = nap / 60;
         } else {
             // 【通常モード】15〜30分は3倍効率、それを超える分は等倍換算
@@ -58,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 合計換算スコア
         const totalScore = night + effectiveNapHours;
         
         // コップの水量計算 (0% 〜 120%)
@@ -69,12 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const waterEl = document.getElementById('water');
         waterEl.style.height = `${pct}%`;
 
-        // 結果テキスト・アドバイスの分岐
         const diff = totalScore - target;
         const resultStatusEl = document.getElementById('result-status');
 
         if (isNightShift) {
-            // 夜勤モード時の判定メッセージ
             waterEl.style.background = 'linear-gradient(to top, #3f51b5, #7986cb)'; // 夜勤用の青水
             if (totalScore >= target) {
                 resultStatusEl.innerHTML = `
@@ -87,12 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultStatusEl.innerHTML = `
                     <div class="alert danger">
                         <strong>夜勤による急性睡眠不足を検知 (残り ${Math.abs(diff).toFixed(1)}時間分不足)</strong><br>
-                        コップが満たされていません。夜勤明けの睡眠は「分割」でも構いませんので、体力を最優先に、1週間の中で少しずつ多めに寝て返済しましょう。
+                        コップが満たされていません。夜勤明けの睡眠は「分割」でも構いません。1週間の中で少しずつ多めに寝て返済しましょう。
                     </div>
                 `;
             }
         } else {
-            // 通常モード時の判定メッセージ
             if (diff >= 0) {
                 waterEl.style.background = 'linear-gradient(to top, #4caf50, #81c784)'; // 安全：グリーン
                 resultStatusEl.innerHTML = `
@@ -113,9 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 計算ボタンのイベント設定
     calcBtn.addEventListener('click', calculateSleep);
-
 
     // --- 3. 睡眠不足度セルフチェックシステム ---
     const checkboxes = document.querySelectorAll('.symptom-check');
@@ -138,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
 
     // --- 4. 解説ページ（モーダル）開閉システム ---
     const modal = document.getElementById('guide-modal');
