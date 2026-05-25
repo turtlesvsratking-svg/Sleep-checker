@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>睡眠負債チェッカー | おしえてかめさん</title>
+    
+    <!-- ホーム画面ショートカット用の設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="睡眠負債">
+    
+    <!-- iOS用のホーム画面アイコン指定 -->
+    <link rel="apple-touch-icon" href="IMG_4320.png">
+    
+    <!-- Android/Chrome用のWebアプリマニフェスト指定 -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- 通常のファビコン指定 -->
+    <link rel="icon" type="image/png" href="IMG_4320.png">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,10 +29,12 @@
     </header>
 
     <main class="container">
+        <!-- 解説ページへの導きボタン -->
         <div class="nav-banner">
             <button id="open-guide-btn" class="btn-secondary">💡 睡眠負債とは？夜勤を乗り切るポイントを解説</button>
         </div>
 
+        <!-- 設定セクション -->
         <section class="card config-section">
             <h2>1. あなたの目標を設定</h2>
             <div class="input-group">
@@ -27,10 +44,12 @@
             <p class="hint-text">※厚生労働省のガイドラインでは、成人は6〜8時間の睡眠確保が推奨されています。</p>
         </section>
 
+        <!-- 入力＆可視化セクション -->
         <div class="grid-layout">
             <section class="card input-section" id="input-card">
                 <h2>2. 今日の睡眠を入力</h2>
                 
+                <!-- 夜勤モードスイッチ -->
                 <div class="nightshift-toggle-box">
                     <label class="toggle-item">
                         <input type="checkbox" id="night-shift-mode"> <strong>⚠️ 今日は夜勤（または夜勤明け）</strong>
@@ -65,6 +84,7 @@
             </section>
         </div>
 
+        <!-- 厚労省基準セルフチェック -->
         <section class="card check-section">
             <h2>⚠️ 睡眠不足のサイン（厚生労働省基準参考）</h2>
             <p class="section-desc">体や心に以下の症状はありませんか？チェックが多い場合は睡眠負債が溜まっている証拠です。</p>
@@ -89,6 +109,7 @@
         </section>
     </main>
 
+    <!-- 解説ページ（モーダルポップアップ） -->
     <div id="guide-modal" class="modal hidden">
         <div class="modal-content">
             <span id="close-guide-btn" class="modal-close">&times;</span>
@@ -112,7 +133,7 @@
                 <h3 class="nightshift-highlight">⭐ 夜勤（シフト勤務）を乗り切る！かめさん流・3つの鉄則</h3>
                 <p>不規則な勤務では、一般的な「夜寝て朝起きる」サイクルが崩れるため、以下の戦略が命になります。</p>
                 <ol>
-                    <li><strong>夜勤入り前の「戦略的仮眠」:</strong> 夜勤が始まる前（午後）に、<strong>90分〜2時間程度</strong>のまとまった仮眠をとっておくと、深夜の強烈な眠気やミスを防ぐことができます（アプリでも夜勤モード時はしっかり加算されます！）。</li>
+                    <li><strong>夜勤入り前の「戦略的仮眠」:</strong> 夜勤が始まる前（午後）に、<strong>90分〜2時間程度</strong>のまとまった仮眠をとっておくと、深夜の強烈な眠気やミスを防ぐことができます。</li>
                     <li><strong>夜勤明けは「帰りのサングラス」が命:</strong> 夜勤が終わって朝一に強い太陽の光を浴びてしまうと、脳が覚醒して帰宅後に深く眠れなくなります。<strong>退勤時はサングラスをかけて帰る</strong>のがプロの技です。</li>
                     <li><strong>夜勤明けの睡眠は「分割」でもOK:</strong> 帰宅直後にまず<strong>3〜4時間</strong>眠り、一度起きて夕方に少し活動した後、夜は通常通り（いつもより少し早め）に寝るという「分割睡眠」にすると、翌日の日勤や休日にスムーズにリズムを戻しやすくなります。</li>
                 </ol>
