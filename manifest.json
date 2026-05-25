@@ -1,0 +1,21 @@
+{
+  "short_name": "睡眠負債",
+  "name": "睡眠負債チェッカー | おしえてかめさん",
+  "icons": [
+    {
+      "src": "IMG_4320.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "IMG_4320.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "index.html",
+  "background_color": "#f4f7f6",
+  "theme_color": "#00796b",
+  "display": "standalone",
+  "orientation": "portrait"
+}
