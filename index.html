@@ -3,107 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>今日何時間寝るかチェッカー</title>
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="何時間寝るか">
-    <link rel="apple-touch-icon" href="IMG_4320.png">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="IMG_4320.png">
-    
+    <title>起床後・夜勤明け睡眠後チェッカー | おしえてかめさん</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
-        <h1 class="nobrk">🐢 今日何時間寝るかチェッカー</h1>
-        <p class="subtitle nobrk">おしえてかめさん流・シフト勤務にも寄り添う睡眠診断</p>
+        <h1 class="nobrk">🐢 起床後・夜勤明け睡眠後チェッカー</h1>
+        <p class="subtitle nobrk">おしえてかめさん流・1日の始まりにひらく睡眠スケジュール診断</p>
     </header>
 
     <main class="container">
-        <div class="nav-banner">
-            <button id="open-guide-btn" class="btn-guide animate-pulse">
-                <span class="icon">💡</span>
-                <span class="text">「睡眠負債」とは？良質な睡眠のポイントを解説【クリックで表示】</span>
-            </button>
-        </div>
-
-        <section class="card config-section">
-            <h2>1. あなたの年齢・目標を設定</h2>
-            <div class="input-group">
-                <label for="target-sleep">普段の目標睡眠時間 (時間):</label>
-                <input type="number" id="target-sleep" min="6" max="9" step="0.5" value="7.0">
-            </div>
-            <p class="hint-text">※厚生労働省の基準では、成人は6〜8時間の睡眠確保が推奨されています。</p>
-        </section>
-
-        <section class="card shift-section">
-            <h2>2. 勤務状況の選択</h2>
+        <!-- 入力カード -->
+        <section id="input-card" class="card">
+            <!-- 勤務モード切り替え -->
             <div class="nightshift-toggle-box">
-                <label class="toggle-item">
-                    <input type="checkbox" id="night-shift-mode"> <strong class="nobrk">⚠️ 今日は夜勤、または夜勤明けですか？</strong>
+                <label class="toggle-label">
+                    <input type="checkbox" id="night-shift-mode">
+                    <span class="toggle-custom"></span>
+                    夜勤明けの睡眠入力をする
                 </label>
-                <p class="toggle-hint">ONにすると、夜勤前後の不規則な仮眠スケジュールに合わせた専用の計算モードに切り替わります。</p>
             </div>
+
+            <!-- 共通目標設定 -->
+            <div class="input-group">
+                <label for="target-sleep">🎯 あなたの理想の睡眠時間 (目標値)</label>
+                <input type="number" id="target-sleep" value="7.0" min="4" max="12" step="0.5"> 直
+            </div>
+
+            <!-- 通常サイクル入力エリア -->
+            <div id="normal-inputs">
+                <div class="input-group">
+                    <label for="night-sleep">🌙 昨晩の実質睡眠時間</label>
+                    <input type="number" id="night-sleep" value="6.0" min="0" max="24" step="0.5"> 時間
+                </div>
+                <div class="input-group">
+                    <label for="nap-sleep">💤 昨日の日中の仮眠（昼寝）</label>
+                    <input type="number" id="nap-sleep" value="0" min="0" max="180" step="5"> 分
+                </div>
+            </div>
+
+            <!-- 夜勤明けサイクル入力エリア（初期状態は非表示） -->
+            <div id="shadow-inputs" class="hidden">
+                <div class="input-group">
+                    <label for="shift-before-nap">🏥 夜勤に入る「前」の仮眠</label>
+                    <input type="number" id="shift-before-nap" value="1.5" min="0" max="12" step="0.5"> 時間
+                </div>
+                <div class="input-group">
+                    <label for="shift-after-nap">🛌 夜勤から帰宅した「後」の睡眠</label>
+                    <input type="number" id="shift-after-nap" value="4.0" min="0" max="12" step="0.5"> 時間
+                </div>
+            </div>
+
+            <!-- 体調チェックリスト（起きた時の感覚） -->
+            <div class="symptom-section">
+                <p class="symptom-title">📢 いま起きてみて、当てはまる感覚は？（複数選択可）</p>
+                <div class="symptom-grid">
+                    <label><input type="checkbox" class="symptom-check" value="1"> すっきり起きられず、体が重い</label>
+                    <label><input type="checkbox" class="symptom-check" value="2"> 午前中なのにすでに欠伸が出る</label>
+                    <label><input type="checkbox" class="symptom-check" value="3"> 頭がぼーっとして集中できない</label>
+                    <label><input type="checkbox" class="symptom-check" value="4"> 普段よりイライラ・焦りを感じる</label>
+                    <label><input type="checkbox" class="symptom-check" value="5"> 目や肩の疲労感が強く残っている</label>
+                </div>
+            </div>
+
+            <button id="calc-btn" class="btn btn-calc">📊 睡眠状況を評価する</button>
         </section>
 
-        <div class="grid-layout">
-            <section class="card input-section" id="input-card">
-                <h2>3. 最近の睡眠状況を入力</h2>
-                
-                <div id="normal-inputs">
-                    <div class="input-group">
-                        <label for="night-sleep">昨晩の睡眠時間 (時間):</label>
-                        <input type="number" id="night-sleep" min="0" max="24" step="0.5" value="6.0">
-                    </div>
-                    <div class="input-group">
-                        <label for="nap-sleep">今日の昼寝時間 (分):</label>
-                        <input type="number" id="nap-sleep" min="0" max="120" step="5" value="20">
-                    </div>
-                </div>
-
-                <div id="shadow-inputs" class="hidden">
-                    <div class="input-group">
-                        <label for="shift-before-nap">夜勤に入る前の「前日仮眠」 (時間):</label>
-                        <input type="number" id="shift-before-nap" min="0" max="12" step="0.5" value="1.5">
-                    </div>
-                    <div class="input-group">
-                        <label for="shift-after-nap">夜勤が終わった後の「明け仮眠」 (時間):</label>
-                        <input type="number" id="shift-after-nap" min="0" max="12" step="0.5" value="3.0">
-                    </div>
-                </div>
-                
-                <button id="calc-btn" class="btn">睡眠状況を評価して提案を受ける</button>
-            </section>
-
-            <section class="card check-section">
-                <h2>4. 睡眠不足のサイン（厚労省基準参考）</h2>
-                <p class="section-desc">現在の心と体に当てはまるものをチェックしてください。</p>
-                <div class="checkbox-list">
-                    <label class="check-item">
-                        <input type="checkbox" class="symptom-check"> <span>朝起きた時に、ぐっすり眠った満足感がない</span>
-                    </label>
-                    <label class="check-item">
-                        <input type="checkbox" class="symptom-check"> <span>日中に強い眠気があり、仕事に集中できない</span>
-                    </label>
-                    <label class="check-item">
-                        <input type="checkbox" class="symptom-check"> <span>最近、いつもよりイライラしやすく情緒不安定</span>
-                    </label>
-                    <label class="check-item">
-                        <input type="checkbox" class="symptom-check"> <span>休日の睡眠が、平日の睡眠より2時間以上長い</span>
-                    </label>
-                    <label class="check-item">
-                        <input type="checkbox" class="symptom-check"> <span>気がつくと甘いものなどをドカ食いしてしまう</span>
-                    </label>
-                </div>
-            </section>
-        </div>
-
-        <section class="card result-card">
-            <h2>🐢 診断結果：今日の夜は何時間寝るべき？</h2>
+        <!-- 結果表示エリア -->
+        <section id="result-area" class="card result-card">
+            <h3>📋 診断結果と今夜のスケジュール提案</h3>
             
-            <div class="result-flex">
+            <!-- 未計算時のプレースホルダー -->
+            <div id="result-placeholder" class="placeholder-text">
+                上のフォームに入力して「睡眠状況を評価する」ボタンを押すと、ここにアドバイスが表示されます。
+            </div>
+
+            <!-- 実際の評価結果 -->
+            <div id="result-content" class="result-flex hidden">
                 <div class="glass-area">
                     <p class="visual-label">睡眠の満たされ度</p>
                     <div class="glass-container">
@@ -116,51 +93,47 @@
                 
                 <div class="proposal-area">
                     <div id="advice-output"></div>
-                    <button id="save-btn" class="btn btn-save" style="margin-top: 1rem;">📁 この診断結果を履歴に保存する</button>
+                    
+                    <!-- アクションボタン群 -->
+                    <div class="btn-group-actions">
+                        <button id="save-btn" class="btn btn-save">📁 履歴に保存</button>
+                        <button id="gcal-btn" class="btn btn-gcal">📅 カレンダー登録</button>
+                    </div>
                 </div>
             </div>
         </section>
 
+        <!-- 履歴一覧エリア -->
         <section class="card history-section">
             <div class="history-header">
-                <h2>📊 過去の睡眠履歴（保存されたカード）</h2>
-                <button id="clear-all-btn" class="btn-clear-all">全て消去</button>
+                <h3>📜 過去の睡眠履歴カード</h3>
+                <button id="clear-all-btn" class="btn btn-clear">全て消去</button>
             </div>
             <div id="history-container" class="history-grid">
-                </div>
+                <!-- JSで動的にカードが挿入されます -->
+            </div>
         </section>
     </main>
 
+    <footer>
+        <p>© 2026 教えてカメさん (Research Consultation Room) All Rights Reserved.</p>
+        <button id="open-guide-btn" class="btn-link">📌 このツールの計算ロジック（解説）</button>
+    </footer>
+
+    <!-- 解説モーダル -->
     <div id="guide-modal" class="modal hidden">
         <div class="modal-content">
-            <span id="close-guide-btn" class="modal-close">&times;</span>
-            <h2>🐢 かめさん直伝！睡眠負債と良質な睡眠のポイント</h2>
-            
-            <div class="modal-body">
-                <h3>1. そもそも「睡眠負債」ってなに？</h3>
-                <p>日々のちょっとした睡眠不足が、まるで借金のように脳と体に積み重なっていく状態をいいます。「1時間くらいだし大丈夫」という油断が、数週間後に集中力低下や情緒不安定、さらには生活習慣病のリリスクを高める原因になります。</p>
-
-                <h3>2. 睡眠負債は「何日ごと」の返済が大事？</h3>
-                <p>睡眠負債は<strong>「1週間以内（週末まで）」に小まめに返済すること</strong>が極めて重要です！<br>
-                週末にまとめて寝る「寝だめ」は、体内の生物時計を狂わせ、月曜日の朝に強い不調を引き起こすため逆効果。負債に気づいたら、その週のうちに毎日30分〜1時間早く寝るか、質の高い昼寝で少しずつ返済しましょう。</p>
-
-                <h3>3. 昼寝の効果的なとり方</h3>
-                <p>15〜30分程度の短い昼寝は、<strong>夜間の睡眠の約3倍に匹敵する疲労回復効果</strong>があります。ただし、「時間は30分以内」「午後3時までに取る」というルールを守ることで、夜の本睡眠を邪魔せずにスッキリ目覚められます。</p>
-
-                <h3 class="nightshift-highlight">⭐ 夜勤（シフト勤務）を乗り切るコツ</h3>
-                <ol>
-                    <li><strong>夜勤入り前の「戦略的仮眠」:</strong> 午後に90分〜2時間程度眠っておくと、深夜の強烈な眠気やミスを防げます。</li>
-                    <li><strong>夜勤明けは「帰りのサングラス」:</strong> 朝一に強い太陽光を浴びると脳が覚醒してしまいます。退勤時はサングラスをかけて帰るのが深く眠るプロの技です。</li>
-                    <li><strong>夜勤明けの睡眠は「分割」でもOK:</strong> 帰宅直後にまず3〜4時間眠り、一度起きて夕方に少し活動した後、夜は通常通り（いつもより少し早め）に寝ることで、翌日以降にリズムを戻しやすくなります。</li>
-                </ol>
-            </div>
-            <button id="close-guide-bottom-btn" class="btn">なるほど、わかった！</button>
+            <span id="close-guide-btn" class="close-btn">&times;</span>
+            <h3>🐢 かめさん流・睡眠計算ロジックの秘密</h3>
+            <p>このツールは、単に睡眠時間を引き算するだけでなく、臨床現場の忙しさや脳疲労の回復度を考慮した独自の補正を行っています。</p>
+            <ul>
+                <li><strong>日中仮眠のボーナス（通常時）:</strong> 昼寝や仮眠は「最初の30分」が最も疲労回復効率が高いため、30分以内の仮眠は時間を3倍にして睡眠充足度にボーナス加算します。</li>
+                <li><strong>体調チェックによる睡眠前倒し提案:</strong> 起床時に自覚症状（脳の疲労サイン）が3つ以上ある場合、睡眠負債の有無に関わらず、今夜の推奨睡眠時間を自動的に「+1.0時間」上乗せして提案します。</li>
+                <li><strong>夜勤サイクルの逆算:</strong> 夜勤明けの睡眠は睡眠の質が低下しやすいため、目標値に対してどれだけ「明け睡眠」が確保できたかを重視し、次の入眠タイミングを最適化します。</li>
+            </ul>
+            <button id="close-guide-bottom-btn" class="btn">閉じる</button>
         </div>
     </div>
-
-    <footer>
-        <p>&copy; 2026 教えてカメさん / 医療・教育のためのセルフケアツール</p>
-    </footer>
 
     <script src="script.js"></script>
 </body>
