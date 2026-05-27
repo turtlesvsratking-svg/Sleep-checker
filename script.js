@@ -2,8 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- DOM要素の取得 ---
     const calcBtn = document.getElementById('calc-btn');
-    const saveBtn = document.getElementById('save-btn');
-    const gcalBtn = document.getElementById('gcal-btn'); 
+    const unifiedSaveBtn = document.getElementById('unified-save-btn'); // 統合ボタン
     const clearAllBtn = document.getElementById('clear-all-btn');
     const nightShiftCheckbox = document.getElementById('night-shift-mode');
     const inputCard = document.getElementById('input-card');
@@ -12,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const shadowInputs = document.getElementById('shadow-inputs');
     const adviceOutput = document.getElementById('advice-output');
     const waterEl = document.getElementById('water');
+    const scoreNumDisplay = document.getElementById('score-num-display'); // 10点指標要素
     const historyContainer = document.getElementById('history-container');
 
     const resultPlaceholder = document.getElementById('result-placeholder');
@@ -37,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
             shadowInputs.classList.add('hidden');
         }
         
-        // モードが変わったら前回の結果を一度リセットする
         resultPlaceholder.classList.remove('hidden');
         resultContent.classList.add('hidden');
     });
@@ -52,10 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
         let sleepDebtHours = 0;     
         let recommendedTonight = 0; 
         let inputSummaryStr = "";   
+        let actualSleepLogged = 0; // カレンダー登録用の実睡眠時間値
 
         if (!isShift) {
             const night = parseFloat(document.getElementById('night-sleep').value);
             const nap = parseFloat(document.getElementById('nap-sleep').value);
+            actualSleepLogged = night;
 
             let effectiveNap = 0;
             if (nap <= 30) {
@@ -77,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const beforeNap = parseFloat(document.getElementById('shift-before-nap').value);
             const afterNap = parseFloat(document.getElementById('shift-after-nap').value);
+            actualSleepLogged = beforeNap + afterNap;
 
             totalScore = beforeNap + afterNap;
             sleepDebtHours = target - totalScore;
@@ -88,7 +90,26 @@ document.addEventListener('DOMContentLoaded', () => {
             inputSummaryStr = `夜勤前仮眠: ${beforeNap}h / 明け仮眠: ${afterNap}h`;
         }
 
-        // コップの満たされ度を視覚化
+        // 睡眠不足(負債)がマイナス値（寝溜め・過剰）にならないよう下限ガード
+        if (sleepDebtHours < 0) sleepDebtHours = 0;
+
+        // 【10点満点評価の計算ロジック】
+        // 睡眠時間割合ベース（最大7点） ＋ 体調チェックの減点無し（最大3点）
+        let timeRatio = totalScore / target;
+        let baseScore = Math.floor(timeRatio * 7);
+        if (baseScore > 7) baseScore = 7;
+        
+        let healthBonus = 3 - checkedCount;
+        if (healthBonus < 0) healthBonus = 0;
+
+        let finalScore = baseScore + healthBonus;
+        if (finalScore > 10) finalScore = 10;
+        if (finalScore < 0) finalScore = 0;
+
+        // 指標画面の更新
+        scoreNumDisplay.innerHTML = `${finalScore}<span class="score-max"> /10点</span>`;
+
+        // コップの可視化反映
         let pct = (totalScore / target) * 100;
         if (pct > 120) pct = 120;
         if (pct < 0) pct = 0;
@@ -103,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
             waterEl.style.background = totalScore >= target ? 'linear-gradient(to top, #4caf50, #81c784)' : 'linear-gradient(to top, #ff9800, #ffb74d)';
         }
 
-        // 提案文章の生成
+        // 提案UI構築
         let htmlOutput = "";
         htmlOutput += `
             <div class="box-target-time ${isShift ? 'shift-mode' : ''}">
@@ -136,45 +157,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
         adviceOutput.innerHTML = htmlOutput;
 
-        // 入力完了に合わせて隠されていた結果エリアを展開
         resultPlaceholder.classList.add('hidden');
         resultContent.classList.remove('hidden');
 
-        // カレンダーURL生成用にオブジェクトを一時記憶
+        // グローバルに計算結果情報を記憶
         currentCalculationResult = {
             isShift: isShift,
             inputSummary: inputSummaryStr,
             recommended: recommendedTonight.toFixed(1),
             checkedSigns: checkedCount,
-            debt: sleepDebtHours.toFixed(1)
+            debt: sleepDebtHours.toFixed(1),
+            score: finalScore,
+            actualSleep: actualSleepLogged.toFixed(1)
         };
     }
 
-    // --- Googleカレンダーに飛ばす連携URLの構築 ---
-    function openGoogleCalendar() {
+    // --- 【重要】1クリックで履歴保存とGoogleカレンダー起動を同時に行う関数 ---
+    function handleUnifiedRegistration() {
         if (!currentCalculationResult) return;
 
-        const modeTitle = currentCalculationResult.isShift ? "【夜勤サイクル】" : "【通常サイクル】";
-        const debtStatus = currentCalculationResult.debt > 0 ? `(負債:${currentCalculationResult.debt}h)` : "(負債なし✨)";
-        const eventTitle = `睡眠ログ ${modeTitle} ${debtStatus}`;
+        // 1. ローカルストレージ履歴への保存処理
+        const historyData = JSON.parse(localStorage.getItem('sleepHistory')) || [];
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const targetValue = parseFloat(document.getElementById('target-sleep').value);
+
+        const newRecord = {
+            date: dateStr,
+            target: targetValue,
+            isShift: currentCalculationResult.isShift,
+            inputSummary: currentCalculationResult.inputSummary,
+            recommended: currentCalculationResult.recommended,
+            checkedSigns: currentCalculationResult.checkedSigns,
+            score: currentCalculationResult.score
+        };
+
+        historyData.unshift(newRecord);
+        localStorage.setItem('sleepHistory', JSON.stringify(historyData));
+        loadHistory(); // 履歴リストをリフレッシュ
+
+        // ボタンのテキスト変更フィードバック演出
+        const originalText = unifiedSaveBtn.innerText;
+        unifiedSaveBtn.innerText = "✨ 履歴保存完了！カレンダーを開きます...";
+        unifiedSaveBtn.style.background = "#4caf50";
+        setTimeout(() => {
+            unifiedSaveBtn.innerText = originalText;
+            unifiedSaveBtn.style.background = "";
+        }, 2000);
+
+        // 2. Googleカレンダー登録用URL構築 ＆ 外部ブラウザ遷移
+        // 【指定形式化】 睡眠評価(満たされ度の得点) 睡眠時間 睡眠負債 
+        const eventTitle = `睡眠評価(${currentCalculationResult.score}点) 睡眠時間:${currentCalculationResult.actualSleep}h 睡眠負債:${currentCalculationResult.debt}h`;
 
         const description = 
-`【おしえてかめさん 睡眠診断結果】
+`【おしえてかめさん 起床後診断データ】
 -----------------------------------------
-■ 入力データ: ${currentCalculationResult.inputSummary}
-■ 今朝の体調チェック該当数: ${currentCalculationResult.checkedSigns} 個
-■ 計算された睡眠負債: ${currentCalculationResult.debt} 時間
+■ 勤務サイクル: ${currentCalculationResult.isShift ? '夜勤サイクル' : '通常サイクル'}
+■ 詳細内訳: ${currentCalculationResult.inputSummary}
+■ 今朝の体調不良チェック数: ${currentCalculationResult.checkedSigns} 個
 -----------------------------------------
-🐢 かめさんからのメッセージ:
-👉 【 ${currentCalculationResult.recommended} 時間 】の睡眠を確保してください。
+🐢 かめさんからのおすすめ就寝提案:
+👉 今夜は 【 ${currentCalculationResult.recommended} 時間 】 の睡眠を目指しましょう！`;
 
-※事前に作成した睡眠専用カレンダーを選択して保存すれば、きれいに色分け管理できます！`;
-
-        const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const date = String(now.getDate()).padStart(2, '0');
-        
         const startHour = String(now.getHours()).padStart(2, '0');
         const startMin = String(now.getMinutes()).padStart(2, '0');
         const endHour = String((now.getHours() + 1) % 24).padStart(2, '0');
@@ -182,10 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateParam = `${year}${month}${date}T${startHour}${startMin}00Z/${year}${month}${date}T${endHour}${startMin}00Z`;
         const gCalUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventTitle)}&details=${encodeURIComponent(description)}&dates=${dateParam}`;
 
+        // 別窓でGoogleカレンダーをオープン
         window.open(gCalUrl, '_blank');
     }
 
-    // --- ローカルストレージ履歴カード管理機能 ---
+    // --- ローカルストレージ履歴レンダリング ---
     function loadHistory() {
         const historyData = JSON.parse(localStorage.getItem('sleepHistory')) || [];
         historyContainer.innerHTML = "";
@@ -199,9 +247,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = `history-card ${item.isShift ? 'shift-style' : 'normal-style'}`;
             
+            // 履歴カード側にもスコア（〇点）を小さく残すよう調整
             card.innerHTML = `
                 <button class="btn-delete-card" data-index="${index}">&times;</button>
-                <div class="history-date">${item.date} [${item.isShift ? '夜勤サイクル' : '通常サイクル'}]</div>
+                <div class="history-date">${item.date} [${item.isShift ? '夜勤' : '通常'}] 満たされ度: ${item.score || 0}点</div>
                 <div class="history-meta">${item.inputSummary} (目標: ${item.target}h)</div>
                 <div class="history-meta">体調チェック該当: ${item.checkedSigns}個</div>
                 <div class="history-result">👉 提案就寝: <strong>${item.recommended}時間</strong></div>
@@ -215,37 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 deleteHistoryItem(idx);
             });
         });
-    }
-
-    function saveHistory() {
-        if (!currentCalculationResult) return;
-
-        const historyData = JSON.parse(localStorage.getItem('sleepHistory')) || [];
-        const now = new Date();
-        const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const targetValue = parseFloat(document.getElementById('target-sleep').value);
-
-        const newRecord = {
-            date: dateStr,
-            target: targetValue,
-            isShift: currentCalculationResult.isShift,
-            inputSummary: currentCalculationResult.inputSummary,
-            recommended: currentCalculationResult.recommended,
-            checkedSigns: currentCalculationResult.checkedSigns
-        };
-
-        historyData.unshift(newRecord);
-        localStorage.setItem('sleepHistory', JSON.stringify(historyData));
-
-        const originalText = saveBtn.innerText;
-        saveBtn.innerText = "✨ 保存成功！";
-        saveBtn.style.backgroundColor = "#4caf50";
-        setTimeout(() => {
-            saveBtn.innerText = originalText;
-            saveBtn.style.backgroundColor = "";
-        }, 1500);
-
-        loadHistory();
     }
 
     function deleteHistoryItem(index) {
@@ -262,13 +280,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // イベント駆動設定
+    // イベントリスナーのセット
     calcBtn.addEventListener('click', evaluateAndPropose);
-    saveBtn.addEventListener('click', saveHistory);
-    gcalBtn.addEventListener('click', openGoogleCalendar); 
+    unifiedSaveBtn.addEventListener('click', handleUnifiedRegistration); // 統合処理を紐付け
     clearAllBtn.addEventListener('click', clearAllHistory);
 
-    // 解説モーダル表示制御
+    // 解説モーダル
     const modal = document.getElementById('guide-modal');
     const openBtn = document.getElementById('open-guide-btn');
     const closeBtn = document.getElementById('close-guide-btn');
